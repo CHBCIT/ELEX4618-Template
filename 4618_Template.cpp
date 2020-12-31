@@ -1,24 +1,20 @@
 ////////////////////////////////////////////////////////////////
 // ELEX 4618 Template project for BCIT
 // Created Oct 5, 2016 by Craig Hennessey
-// Last updated January 5, 2020
+// Last updated December 30, 2020
 ////////////////////////////////////////////////////////////////
 #include "stdafx.h"
 
 #include <string>
 #include <iostream>
+#include <fstream>
+#include <sstream>
 #include <thread>
 
 #include "Client.h"
 #include "Server.h"
-#include "Serial.h" // Must include Windows.h after Winsock2.h, so Serial must include after Client/Server
-
-// OpenCV Include
-#include "opencv.hpp"
-
-// OpenCV Library
-#pragma comment(lib, ".\\opencv\\x64\\vc16\\lib\\opencv_world420d.lib") // debug
-//#pragma comment(lib, ".\\opencv\\x64\\vc16\\lib\\opencv_world420.lib") // release
+// Must include Windows.h after Winsock2.h, so Serial must include after Client/Server
+#include "Serial.h" 
 
 void process_msg()
 {
@@ -35,9 +31,9 @@ void process_msg()
 ////////////////////////////////////////////////////////////////
 void test_com()
 {
-  // Comport class
+  // Comport class (change port to your MSP device port)
   Serial com;
-  com.open("COM89");
+  com.open("COM3");
 
   // TX and RX strings
   std::string tx_str = "G 1 15\n";

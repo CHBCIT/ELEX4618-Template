@@ -11,10 +11,6 @@
 #include <mutex>
 #include <vector>
 
-// OpenCV Include
-#ifdef WIN4618
-#include "opencv.hpp"
-#endif
 #ifdef PI4618
 #include <opencv2/opencv.hpp>
 #endif

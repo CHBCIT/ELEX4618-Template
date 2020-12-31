@@ -5,8 +5,6 @@
 
 #include <string>
 
-#include "opencv.hpp"
-
 #include "Winsock2.h"
 
 class Client 

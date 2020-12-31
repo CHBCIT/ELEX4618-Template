@@ -11,12 +11,6 @@
 
 #include "Client.h"
 
-// OpenCV Include
-#include "opencv.hpp"
-
-// OpenCV Library
-#pragma comment(lib, ".\\opencv\\x64\\vc16\\lib\\opencv_world420d.lib")
-
 Client client(4618, "127.0.0.1");
 
 void print_menu()
