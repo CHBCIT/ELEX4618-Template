@@ -22,6 +22,7 @@
 *.la
 *.a
 *.lib
+/opencv/
 
 # Executables
 *.exe
@@ -29,15 +30,7 @@
 *.app
 *.idb
 *.tlog
-/.vs/4618_Template/v16/*.suo
-/.vs/4618_Template/v16/*.db
-/build/4618_Client/x64/Debug/*.ilk
-/build/4618_Client/x64/Debug/*.pdb
-/build/4618_Client/x64/Debug/obj/*.log
-/build/4618_Client/x64/Debug/obj/*.pdb
-/build/4618_Template/x64/Debug/*.ilk
-/build/4618_Template/x64/Debug/*.pdb
-/build/4618_Template/x64/Debug/obj/*.log
-/build/4618_Template/x64/Debug/obj/*.pdb
-/.vs/4618_Template/v16/*.opendb
 /*.user
+/.vs/
+/build/
+
