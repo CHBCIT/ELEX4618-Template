@@ -124,35 +124,87 @@ void do_video()
 ////////////////////////////////////////////////////////////////
 // Demo client server communication
 ////////////////////////////////////////////////////////////////
+bool serverthreadexit = false;
 Server serv;
 
 // Send image to TCP server
-void serverimagefunc()
+void serverimagethread()
 {
   cv::VideoCapture vid;
 
   vid.open(0);
 
-  if (vid.isOpened() == TRUE)
+  if (vid.isOpened() == true)
   {
     do
     {
       cv::Mat frame;
       vid >> frame;
-      serv.set_txim(frame);
+      if (frame.empty() == false)
+      {
+        imshow("Server Image", frame);
+        process_msg();
+        serv.set_txim(frame);
+      }
     }
-    while (cv::waitKey(10) != ' ');
+    while (serverthreadexit == false);
   }
+}
+
+void serverthread()
+{
+  // Start server
+  serv.start(4618);
 }
 
 void server()
 {
-  // Start image send to server
-  std::thread t(&serverimagefunc);
-  t.detach();
+  char inputchar;
+  std::vector<std::string> cmds;
 
-	// Start server
-	serv.start(4618);
+  // Start image send to server thread
+  std::thread t1(&serverimagethread);
+  t1.detach();
+
+  // Start server thread
+  std::thread t2(&serverthread);
+  t2.detach();
+
+  cv::namedWindow("WindowForWaitkey");
+  do
+  {
+    inputchar = cv::waitKey(100);
+    if (inputchar == 'q') 
+    { 
+      serverthreadexit = true; 
+    }
+
+    serv.get_cmd(cmds);
+
+    if (cmds.size() > 0)
+    {
+      for (int i = 0; i < cmds.size(); i++)
+      {
+        if (cmds.at(i) == "a")
+        {
+          std::cout << "\nReceived 'a' command";
+
+          // Send an 'a' message
+          std::string reply = "Hi there from Server";
+          serv.send_string(reply);
+        }
+        else
+        {
+          std::string reply = "Got some other message";
+          serv.send_string(reply);
+        }
+      }
+    }
+  } while (serverthreadexit == false);
+
+  serv.stop();
+  
+  Sleep(100);
 }
 
 void print_menu()

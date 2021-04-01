@@ -1,7 +1,8 @@
 ///////////////////////////////////////////////////////////////////
 // Prepared for BCIT ELEX4618, May 2017, by Craig Hennessey
+// Updated March 31, 2021
 ///////////////////////////////////////////////////////////////////
-#include "stdafx.h"
+#include "stdafx.h" // remove for PI version
 
 #include "server.h"
 
@@ -22,6 +23,7 @@ typedef int SOCKET;
 #include <fcntl.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <thread>
 #endif
 
 #define RECV_BUFF_SIZE 256
@@ -51,23 +53,20 @@ Server::Server()
 
 Server::~Server()
 {
-  _exit = true;
-  cv::waitKey(150);
+  stop();
 }
 
-void Server::set_txim (cv::Mat &im)
+void Server::stop()
 {
-  if (im.empty() == false)
-  {
-    _immutex.lock();
-    im.copyTo(_txim);
-    _immutex.unlock();
-  }
+  _server_exit = true;
+  cv::waitKey(100);
 }
 
 void Server::start(int port)
 {
   cv::Mat frame;
+
+  _server_exit = false;
 
   // Image compression parameters
   std::vector<unsigned char> image_buffer;
@@ -138,9 +137,9 @@ void Server::start(int port)
 
   listen(serversock, BACKLOG);
 
-  while (_exit == false)
+  while (_server_exit == false)
   {
-    cv::waitKey(100);
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
     
     clientsock = accept(serversock, (struct sockaddr *) &client_addr, &addressSize);
 
@@ -150,6 +149,21 @@ void Server::start(int port)
       
       do
       {
+        if (_send_list.size() > 0)
+        {
+          std::vector<std::string> send_str;
+
+          _tx_mutex.lock();
+          send_str = _send_list;
+          _send_list.clear();
+          _tx_mutex.unlock();
+
+          for (int i = 0; i < send_str.size(); i++)
+          {
+            send(clientsock, send_str.at(i).c_str(), send_str.at(i).length(), 0);
+          }
+        }
+
         ret = recv(clientsock, buff, BUFFER, 0);
 
         // If socket was shut down orderly (client disconnected)
@@ -210,9 +224,9 @@ void Server::start(int port)
 						{
 							std::cout << "\nReceived 'im' command";
 
-							_immutex.lock();
+							_image_mutex.lock();
 							_txim.copyTo(frame);
-							_immutex.unlock();
+              _image_mutex.unlock();
 
 							image_buffer.clear();
 							if (frame.empty() == false)
@@ -225,30 +239,16 @@ void Server::start(int port)
 							send(clientsock, reinterpret_cast<char*>(&image_buffer[0]), image_buffer.size(), 0);
 						}
 						// The client sent a message, add to cmd list queue
-						else if (str == "a")
-						{
-							std::cout << "\nReceived 'a' command";
-
-							// Remove the following two lines in the final version
-							std::string reply = "Hi there from Server";
-							send(clientsock, reply.c_str(), reply.length(), 0);
-						}
 						else
 						{
-							_cmdmutex.lock();
+              _rx_mutex.lock();
 							_cmd_list.push_back(str);
-							_cmdmutex.unlock();
-
-							std::cout << "\nReceived other command";
-
-							// Remove the following two lines in the final version
-							std::string reply = "Response to other command";
-							send(clientsock, reply.c_str(), reply.length(), 0);
+              _rx_mutex.unlock();
 						}
 					}
         }
       } 
-      while (clientsock != INVALID_SOCKET && _exit != true);
+      while (clientsock != INVALID_SOCKET && _server_exit != true);
     }
   }
 
@@ -264,11 +264,28 @@ void Server::start(int port)
 
 void Server::get_cmd (std::vector<std::string> &cmds)
 {
-  cmds.clear();
-  
-  // Copy command list into return list
-  _cmdmutex.lock();
-  _cmd_list.swap(cmds);
-  _cmdmutex.unlock();
+  cmds.clear();  
+  // Copy command list to return and then clear
+  _rx_mutex.lock();
+  cmds = _cmd_list;
+  _cmd_list.clear();
+  _rx_mutex.unlock();
+}
+
+void Server::set_txim(cv::Mat& im)
+{
+  if (im.empty() == false)
+  {
+    _image_mutex.lock();
+    im.copyTo(_txim);
+    _image_mutex.unlock();
+  }
+}
+
+void Server::send_string(std::string send_str)
+{
+  _tx_mutex.lock();
+  _send_list.push_back(send_str);
+  _tx_mutex.unlock();  
 }
 
