@@ -1,9 +1,14 @@
 ////////////////////////////////////////////////////////////////
 // ELEX 4618 Template project for BCIT
 // Created Oct 5, 2016 by Craig Hennessey
-// Last updated April 6, 2021
+// Last updated Dec 6, 2021
 ////////////////////////////////////////////////////////////////
 #include "stdafx.h"
+
+// Add simple GUI elements
+#define CVUI_DISABLE_COMPILATION_NOTICES
+#define CVUI_IMPLEMENTATION
+#include "cvui.h"
 
 #include <string>
 #include <iostream>
@@ -13,8 +18,11 @@
 
 #include "Client.h"
 #include "Server.h"
-// Must include Windows.h after Winsock2.h, so Serial must include after Client/Server
+
+// Must include Windows.h after Winsock2.h, so Serial must be included after Client/Server
 #include "Serial.h" 
+
+#define CANVAS_NAME "Display Image"
 
 void process_msg()
 {
@@ -88,7 +96,7 @@ void do_image()
     
     im.at<char>(i,i) = 255;
     
-    cv::imshow("Image", im);
+    cv::imshow(CANVAS_NAME, im);
     cv::waitKey(1);
   }
 }
@@ -102,18 +110,60 @@ void do_video()
 
   vid.open(0);
 
+  cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
+
+  bool do_canny = true;
+  bool do_aruco = false;
+  int canny_thresh = 30;
+  cvui::init(CANVAS_NAME);
+  cv::Point set_pt = cv::Point(10, 50);
+  std::vector<cv::Scalar> color_vec;
+  color_vec.push_back(cv::Scalar(255, 255, 255));
+  color_vec.push_back(cv::Scalar(255, 0, 0));
+  color_vec.push_back(cv::Scalar(0, 255, 0));
+  color_vec.push_back(cv::Scalar(0, 0, 255));
+  int color_index = 0;
   if (vid.isOpened() == TRUE)
   {
     do
     {
       cv::Mat frame, edges;
       vid >> frame;
+
       if (frame.empty() == false)
-      {
-        cv::cvtColor(frame, edges, cv::COLOR_BGR2GRAY);
-        cv::GaussianBlur(edges, edges, cv::Size(7, 7), 1.5, 1.5);
-        cv::Canny(edges, edges, 0, 30, 3);
-        cv::imshow("edges", edges);
+      { 
+        if (do_aruco == true)
+        {
+          std::vector<int> ids;
+          std::vector<std::vector<cv::Point2f> > corners;
+          cv::aruco::detectMarkers(frame, dictionary, corners, ids);
+          if (ids.size() > 0)
+          {
+            cv::aruco::drawDetectedMarkers(frame, corners, ids);
+          }
+        }
+
+        if (do_canny == true)
+        {
+          cv::cvtColor(frame, edges, cv::COLOR_BGR2GRAY);
+          cv::GaussianBlur(edges, edges, cv::Size(7, 7), 1.5, 1.5);
+          cv::Canny(edges, edges, 0, canny_thresh, 3);
+          cv::add(frame, color_vec.at(color_index), frame, edges);
+        }
+
+        cvui::window(frame, set_pt.x, set_pt.y, 200, 190, "Settings");
+        cvui::checkbox(frame, set_pt.x + 5, set_pt.y + 25, "Canny Filter", &do_canny);
+        cvui::checkbox(frame, set_pt.x + 5, set_pt.y + 50, "ArUco", &do_aruco);
+        cvui::text(frame, set_pt.x + 5, set_pt.y + 75, "Canny Threshold");
+        cvui::trackbar(frame, set_pt.x + 5, set_pt.y + 90, 180, &canny_thresh, 5, 120);
+        if (cvui::button(frame, set_pt.x + 5, set_pt.y + 140, 100, 30, "Colour Switch"))
+        {
+          color_index++;
+          if (color_index >= color_vec.size()) { color_index = 0; }
+        }
+
+        cvui::update();
+        cv::imshow(CANVAS_NAME, frame);
       }
     }
     while (cv::waitKey(10) != ' ');
