@@ -24,6 +24,9 @@
 
 #define CANVAS_NAME "Display Image"
 
+////////////////////////////////////////////////////////////////
+// Can be used as a replacement for cv::waitKey() to display cv::imshow() images, Windows Only
+////////////////////////////////////////////////////////////////
 void process_msg()
 {
   MSG msg;
@@ -35,16 +38,35 @@ void process_msg()
 }
 
 ////////////////////////////////////////////////////////////////
+// Generate ARUCO markers
+////////////////////////////////////////////////////////////////
+void generate_marks()
+{
+  std::string str;
+  cv::Mat im;
+  int mark_size = 100;
+
+  cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
+
+  for (int marker_id = 0; marker_id < 250; marker_id++)
+  {
+    cv::aruco::drawMarker(dictionary, marker_id, mark_size, im, 1);
+    str = "mark" + std::to_string(marker_id) + ".png";
+    cv::imwrite(str, im);
+  }
+}
+
+////////////////////////////////////////////////////////////////
 // Serial Communication
 ////////////////////////////////////////////////////////////////
 void test_com()
 {
   // Comport class (change port to your MSP device port)
   Serial com;
-  com.open("COM3");
+  com.open("COM121");
 
   // TX and RX strings
-  std::string tx_str = "G 1 15\n";
+  std::string tx_str = "G 1 11\n";
   std::string rx_str;
 
   // temporary storage
@@ -109,20 +131,23 @@ void do_video()
   cv::VideoCapture vid;
 
   vid.open(0);
-
-  cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
-
+    
   bool do_canny = true;
   bool do_aruco = false;
   int canny_thresh = 30;
+
+  cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
+
   cvui::init(CANVAS_NAME);
   cv::Point set_pt = cv::Point(10, 50);
+  
   std::vector<cv::Scalar> color_vec;
   color_vec.push_back(cv::Scalar(255, 255, 255));
   color_vec.push_back(cv::Scalar(255, 0, 0));
   color_vec.push_back(cv::Scalar(0, 255, 0));
   color_vec.push_back(cv::Scalar(0, 0, 255));
   int color_index = 0;
+  
   if (vid.isOpened() == TRUE)
   {
     do
@@ -174,85 +199,68 @@ void do_video()
 ////////////////////////////////////////////////////////////////
 // Demo client server communication
 ////////////////////////////////////////////////////////////////
-bool serverthreadexit = false;
-Server serv;
-
-// Send image to TCP server
-void serverimagethread()
+void serverthread(CServer* server)
 {
+  // Start server
+  server->start(4618);
+}
+
+void do_clientserver()
+{
+  char inputchar = 0;
+  std::vector<std::string> cmds;
+
   cv::VideoCapture vid;
+  CServer server;
+
+  // Start server thread
+  std::thread t(&serverthread, &server);
+  t.detach();
 
   vid.open(0);
 
-  if (vid.isOpened() == true)
-  {
-    do
-    {
-      cv::Mat frame;
-      vid >> frame;
-      if (frame.empty() == false)
-      {
-        imshow("Server Image", frame);
-        process_msg();
-        serv.set_txim(frame);
-      }
-    }
-    while (serverthreadexit == false);
-  }
-}
-
-void serverthread()
-{
-  // Start server
-  serv.start(4618);
-}
-
-void server()
-{
-  char inputchar;
-  std::vector<std::string> cmds;
-
-  // Start image send to server thread
-  std::thread t1(&serverimagethread);
-  t1.detach();
-
-  // Start server thread
-  std::thread t2(&serverthread);
-  t2.detach();
-
-  cv::namedWindow("WindowForWaitkey");
-  do
+  while (inputchar != 'q')
   {
     inputchar = cv::waitKey(100);
-    if (inputchar == 'q') 
-    { 
-      serverthreadexit = true; 
-    }
 
-    serv.get_cmd(cmds);
-
+    server.get_cmd(cmds);
     if (cmds.size() > 0)
     {
+      // Process different commands received by the server
       for (int i = 0; i < cmds.size(); i++)
       {
-        if (cmds.at(i) == "a")
+        if (cmds.at(i) == "G 0")
         {
-          std::cout << "\nReceived 'a' command";
+          std::cout << "\nServer Rx: " << cmds.at(i);
 
-          // Send an 'a' message
           std::string reply = "Hi there from Server";
-          serv.send_string(reply);
+          server.send_string(reply);
         }
         else
         {
+          std::cout << "\nServer Rx: " << cmds.at(i);
+
           std::string reply = "Got some other message";
-          serv.send_string(reply);
+          server.send_string(reply);
         }
       }
     }
-  } while (serverthreadexit == false);
 
-  serv.stop();
+		// Update server image with the latest camera image
+		if (vid.isOpened() == true)
+		{
+			cv::Mat frame;
+			vid >> frame;
+			if (frame.empty() == false)
+			{
+				imshow("Server Image", frame);
+				process_msg();
+				server.set_txim(frame);
+			}
+		}
+  };
+
+  server.stop();
   
   Sleep(100);
 }
@@ -282,7 +290,7 @@ int main(int argc, char* argv[])
 		case 1: test_com(); break;
 		case 2: do_image(); break;
 		case 3: do_video(); break;
-		case 4: server(); break;
+		case 4: do_clientserver(); break;
 		}
 	} while (cmd != 0);
 }

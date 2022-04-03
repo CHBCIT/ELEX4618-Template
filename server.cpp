@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////
 // Prepared for BCIT ELEX4618, May 2017, by Craig Hennessey
-// Updated March 31, 2021
+// Updated April, 2022
 ///////////////////////////////////////////////////////////////////
 #include "stdafx.h" // remove for PI version
 
@@ -31,38 +31,38 @@ typedef int SOCKET;
 #define BACKLOG 5
 #define BUFFER 16000
 
-bool setblocking(int fd, bool blocking)
-{
-   if (fd < 0) return false;
-
-#ifdef WIN4618
-   unsigned long mode = blocking ? 0 : 1;
-   return (ioctlsocket(fd, FIONBIO, &mode) == 0) ? true : false;
-#else
-   int flags = fcntl(fd, F_GETFL, 0);
-   if (flags < 0) return false;
-   flags = blocking ? (flags&~O_NONBLOCK) : (flags|O_NONBLOCK);
-   return (fcntl(fd, F_SETFL, flags) == 0) ? true : false;
-#endif
-}
-
-Server::Server()
+CServer::CServer()
 {
   _txim = cv::Mat::zeros(10,10,CV_8UC3);
 }
 
-Server::~Server()
+CServer::~CServer()
 {
   stop();
 }
 
-void Server::stop()
+bool CServer::setblocking(int fd, bool blocking)
+{
+  if (fd < 0) return false;
+
+#ifdef WIN4618
+  unsigned long mode = blocking ? 0 : 1;
+  return (ioctlsocket(fd, FIONBIO, &mode) == 0) ? true : false;
+#else
+  int flags = fcntl(fd, F_GETFL, 0);
+  if (flags < 0) return false;
+  flags = blocking ? (flags & ~O_NONBLOCK) : (flags | O_NONBLOCK);
+  return (fcntl(fd, F_SETFL, flags) == 0) ? true : false;
+#endif
+}
+
+void CServer::stop()
 {
   _server_exit = true;
   cv::waitKey(100);
 }
 
-void Server::start(int port)
+void CServer::start(int port)
 {
   cv::Mat frame;
 
@@ -78,7 +78,7 @@ void Server::start(int port)
   struct sockaddr_in server_addr, client_addr;
   SOCKET serversock = 0;
   SOCKET clientsock = 0;
- 
+
 #ifdef WIN4618
   WSADATA wsdat;
  int addressSize = sizeof(server_addr);
@@ -108,7 +108,7 @@ void Server::start(int port)
     return;
   }
 
-  if (setblocking(serversock, false) == SOCKET_ERROR)
+  if (setblocking(serversock, false) == false)
   {
     std::cout << "Server Exit: failed to set non-blocking";
 #ifdef WIN4618
@@ -130,7 +130,7 @@ void Server::start(int port)
 #endif
 #ifdef PI4618
     close(serversock);
-#endif  
+#endif
     std::cout << "Server Exit: bind error";
     return;
   }
@@ -140,13 +140,15 @@ void Server::start(int port)
   while (_server_exit == false)
   {
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
-    
+
     clientsock = accept(serversock, (struct sockaddr *) &client_addr, &addressSize);
 
     if (clientsock != INVALID_SOCKET)
     {
       setblocking(clientsock, false);
       
+      std::cout << "Server: Connected on port " << port;
+
       do
       {
         if (_send_list.size() > 0)
@@ -198,9 +200,9 @@ void Server::start(int port)
 
 #ifdef WIN4618
           if (WSAGetLastError() == WSAEWOULDBLOCK)
-          { 
+          {
             // no data to recieve, go check again
-          } 
+          }
           else
           {
             closesocket(clientsock);
@@ -209,45 +211,43 @@ void Server::start(int port)
 #endif
         }
         else
-				{
-					if (ret < BUFFER)
-					{
-						// Add NULL terminator to string
-						buff[ret] = 0;
+        {
+          if (ret < BUFFER)
+          {
+            // Add NULL terminator to string
+            buff[ret] = 0;
 
-						// Processing incoming data
-						std::string str = buff;
-						//std::cout << "\nServer RX: " << str;
+            // Processing incoming data
+            std::string str = buff;
+            //std::cout << "\nServer RX: " << str;
 
-						// The client sent "im" as a message
-						if (str == "im")
-						{
-							std::cout << "\nReceived 'im' command";
-
-							_image_mutex.lock();
-							_txim.copyTo(frame);
+            // The client sent "im" as a message
+            if (str == "im")
+            {
+              _image_mutex.lock();
+              _txim.copyTo(frame);
               _image_mutex.unlock();
 
-							image_buffer.clear();
-							if (frame.empty() == false)
-							{
-								// Compress image to reduce size
-								cv::imencode("image.jpg", frame, image_buffer, compression_params);
-							}
+              image_buffer.clear();
+              if (frame.empty() == false)
+              {
+                // Compress image to reduce size
+                cv::imencode("image.jpg", frame, image_buffer, compression_params);
+              }
 
 							// Send image
-							send(clientsock, reinterpret_cast<char*>(&image_buffer[0]), image_buffer.size(), 0);
-						}
-						// The client sent a message, add to cmd list queue
-						else
-						{
+              send(clientsock, reinterpret_cast<char*>(&image_buffer[0]), image_buffer.size(), 0);
+            }
+            // The client sent a message, add to cmd list queue
+            else
+            {
               _rx_mutex.lock();
-							_cmd_list.push_back(str);
+              _cmd_list.push_back(str);
               _rx_mutex.unlock();
-						}
-					}
+            }
+          }
         }
-      } 
+      }
       while (clientsock != INVALID_SOCKET && _server_exit != true);
     }
   }
@@ -259,12 +259,12 @@ void Server::start(int port)
 
 #ifdef PI4618
   close(serversock);
-#endif  
+#endif
 }
 
-void Server::get_cmd (std::vector<std::string> &cmds)
+void CServer::get_cmd (std::vector<std::string> &cmds)
 {
-  cmds.clear();  
+  cmds.clear();
   // Copy command list to return and then clear
   _rx_mutex.lock();
   cmds = _cmd_list;
@@ -272,7 +272,7 @@ void Server::get_cmd (std::vector<std::string> &cmds)
   _rx_mutex.unlock();
 }
 
-void Server::set_txim(cv::Mat& im)
+void CServer::set_txim(cv::Mat& im)
 {
   if (im.empty() == false)
   {
@@ -282,7 +282,7 @@ void Server::set_txim(cv::Mat& im)
   }
 }
 
-void Server::send_string(std::string send_str)
+void CServer::send_string(std::string send_str)
 {
   _tx_mutex.lock();
   _send_list.push_back(send_str);

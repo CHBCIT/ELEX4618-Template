@@ -85,7 +85,7 @@ Serial::~Serial()
 
 bool Serial::is_open()
 {
-	if (commHandle == NULL)
+	if (commHandle == INVALID_HANDLE_VALUE)
 	{
 		return false;
 	}

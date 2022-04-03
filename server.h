@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////
-// Prepared for BCIT ELEX4618 by Craig Hennessey
+// Prepared for BCIT ELEX4618, April 2022, by Craig Hennessey
 ///////////////////////////////////////////////////////////////////
 #pragma once
 
@@ -15,7 +15,7 @@
 #include <opencv2/opencv.hpp>
 #endif
 
-class Server
+class CServer
 {
 private:
   bool _server_exit;
@@ -26,10 +26,12 @@ private:
   std::mutex _tx_mutex;
   std::vector<std::string> _cmd_list;
   std::vector<std::string> _send_list;
+  
+  bool setblocking(int fd, bool blocking);
 
 public:
-  Server();
-	~Server();
+  CServer();
+	~CServer();
 
   // Start server listening (probably best to do in a separate thread)
   void start(int port);
