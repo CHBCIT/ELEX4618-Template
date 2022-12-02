@@ -226,7 +226,6 @@ void CServer::start(int port)
             {
               _image_mutex.lock();
               _txim.copyTo(frame);
-              _image_mutex.unlock();
 
               image_buffer.clear();
               if (frame.empty() == false)
@@ -234,6 +233,7 @@ void CServer::start(int port)
                 // Compress image to reduce size
                 cv::imencode("image.jpg", frame, image_buffer, compression_params);
               }
+              _image_mutex.unlock();
 
 							// Send image
               send(clientsock, reinterpret_cast<char*>(&image_buffer[0]), image_buffer.size(), 0);

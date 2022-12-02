@@ -120,17 +120,22 @@ bool CClient::rx_im(cv::Mat &im)
 {
 	char rxbuff[BUFF_SIZE];
 	int rxbytes = -1;
-	double start_time = cv::getTickCount();
+  int imagebytes = 0;
+  int minimum_image_size = 5000;
 
-	do
+  double start_time = cv::getTickCount();
+
+  // Store incoming data into byte array
+  do
 	{
-		// Store incoming data into byte array
 		rxbytes = recv(_socket, rxbuff, BUFF_SIZE, 0);
 	} 
   while (rxbytes == -1 && (cv::getTickCount() - start_time) / cv::getTickFrequency() < 1.0);  // Timeout after 1 second
 
-	// If all the bytes were recieved, decode JPEG data to image
-	if (rxbytes > 0)
+  std::cout << "\nRXbytes = " << rxbytes;
+
+  // If all the bytes were recieved, decode JPEG data to image (assumes image size minimum is 5kB)
+	if (rxbytes > minimum_image_size)
 	{
 		im = imdecode(cv::Mat(rxbytes, 1, CV_8U, rxbuff), cv::IMREAD_UNCHANGED);
 		return true;
