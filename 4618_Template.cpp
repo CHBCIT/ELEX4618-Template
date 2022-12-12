@@ -143,11 +143,12 @@ void do_video()
 {
   cv::VideoCapture vid;
 
-  vid.open(0);
+  vid.open(0, cv::CAP_DSHOW);
     
   bool do_canny = true;
   bool do_aruco = false;
   int canny_thresh = 30;
+  bool do_exit = false;
 
   cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
 
@@ -212,12 +213,17 @@ void do_video()
           color_index++;
           if (color_index >= color_vec.size()) { color_index = 0; }
         }
+        gui_position += cv::Point(120, 0);
+        if (cvui::button(frame, gui_position.x, gui_position.y, 50, 30, "Exit"))
+        {
+          do_exit = true;
+        }
 
         cvui::update();
         cv::imshow(CANVAS_NAME, frame);
       }
     }
-    while (cv::waitKey(10) != ' ');
+    while (cv::waitKey(1) != 'q' && do_exit == false);
   }      
 }		
 
