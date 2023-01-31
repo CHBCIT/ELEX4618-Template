@@ -63,7 +63,7 @@ void test_com()
 {
   // Comport class (change port to your MSP device port)
   Serial com;
-  com.open("COM121");
+  com.open("COM4");
 
   // TX and RX strings
   std::string tx_str = "G 1 11\n";
@@ -130,6 +130,9 @@ void do_image()
     
     im.at<char>(i,i) = 255;
     
+    // Update the CVUI GUI system
+    cvui::update();
+
     // Show image and delay (all display image to update)
     cv::imshow(CANVAS_NAME, im);
     cv::waitKey(1);
@@ -219,6 +222,7 @@ void do_video()
           do_exit = true;
         }
 
+        // Update the CVUI GUI system
         cvui::update();
         cv::imshow(CANVAS_NAME, frame);
       }
@@ -362,7 +366,8 @@ void print_menu()
 
 int main(int argc, char* argv[])
 {
-  generate_marks();
+  // generate_marks();
+
 	int cmd = -1;
 	do
 	{
