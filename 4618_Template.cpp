@@ -63,7 +63,7 @@ void test_com()
 {
   // Comport class (change port to your MSP device port)
   Serial com;
-  com.open("COM4");
+  com.open("COM6");
 
   // TX and RX strings
   std::string tx_str = "G 1 11\n";
@@ -375,12 +375,12 @@ int main(int argc, char* argv[])
 		std::cin >> cmd;
 		switch (cmd)
 		{
-    case 1: lab1(); break;
-    case 2: lab2(); break;
-    case 3: lab3(); break;
-    case 4: lab4(); break;
-    case 5: lab5(); break;
-    case 6: lab6(); break;
+    case 1: lab1();
+    case 2: lab2();
+    case 3: lab3();
+    case 4: lab4();
+    case 5: lab5();
+    case 6: lab6();
     case 10: test_com(); break;
 		case 11: do_image(); break;
 		case 12: do_video(); break;
