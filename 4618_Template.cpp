@@ -46,11 +46,11 @@ void generate_marks()
   cv::Mat im;
   int mark_size = 250;
 
-  cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
-
+  cv::aruco::Dictionary dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
+  
   for (int marker_id = 0; marker_id < 250; marker_id++)
   {
-    cv::aruco::drawMarker(dictionary, marker_id, mark_size, im, 1);
+    cv::aruco::generateImageMarker(dictionary, marker_id, mark_size, im, 1);
     str = "mark" + std::to_string(marker_id) + ".png";
     cv::imwrite(str, im);
   }
@@ -153,7 +153,9 @@ void do_video()
   int canny_thresh = 30;
   bool do_exit = false;
 
-  cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
+  cv::aruco::DetectorParameters detectorParams = cv::aruco::DetectorParameters();
+  cv::aruco::Dictionary dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
+  cv::aruco::ArucoDetector detector(dictionary, detectorParams);
 
   // initialize GUI system
   cvui::init(CANVAS_NAME);
@@ -182,8 +184,9 @@ void do_video()
         if (do_aruco == true)
         {
           std::vector<int> ids;
-          std::vector<std::vector<cv::Point2f> > corners;
-          cv::aruco::detectMarkers(frame, dictionary, corners, ids);
+          std::vector<std::vector<cv::Point2f>> corners;
+          detector.detectMarkers(frame, corners, ids);
+
           if (ids.size() > 0)
           {
             cv::aruco::drawDetectedMarkers(frame, corners, ids);
