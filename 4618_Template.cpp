@@ -1,7 +1,9 @@
 ////////////////////////////////////////////////////////////////
 // ELEX 4618 Template project for BCIT
 // Created Oct 5, 2016 by Craig Hennessey
-// Last updated April 4, 2024
+// NOTE: You must download the 'opencv.zip' file from D2L
+// NOTE: Unzip and place in the parent folder before your lab folders
+// i.e. you have \4618\opencv and then \4618\Labs
 ////////////////////////////////////////////////////////////////
 #include "stdafx.h"
 
