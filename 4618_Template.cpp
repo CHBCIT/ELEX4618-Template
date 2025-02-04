@@ -65,7 +65,7 @@ void test_com()
 {
   // Comport class (change port to your MSP device port)
   Serial com;
-  com.open("COM6");
+  com.open("COM4");
 
   // TX and RX strings
   std::string tx_str = "G 1 11\n";
@@ -355,9 +355,9 @@ void print_menu()
   std::cout << "\n(1) Lab 1 - User Input";
   std::cout << "\n(2) Lab 2 - Grading";
   std::cout << "\n(3) Lab 3 - Embedded Control";
-  std::cout << "\n(4) Lab 4 - Etch-A-Sketch";
-  std::cout << "\n(5) Lab 5 - Pong";
-  std::cout << "\n(6) Lab 6 - Classic Arcade Game";
+  std::cout << "\n(4) Lab 4 - Classic Arcade Game 1";
+  std::cout << "\n(5) Lab 5 - Classic Arcade Game 2";
+  std::cout << "\n(6) Lab 6 - Classic Arcade Game 3";
   std::cout << "\n(7) Lab 7 - Linux Port";
   std::cout << "\n(8) Lab 8 - Sorting";
   std::cout << "\n(9) Lab 9 - Sockets";
